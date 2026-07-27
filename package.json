@@ -1,0 +1,7 @@
+{
+  "name": "zeno-api",
+  "version": "1.0.0",
+  "description": "Zeno Telegram Data API",
+  "main": "api/index.js",
+  "type": "module"
+}
