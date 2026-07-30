@@ -61,7 +61,7 @@ export default async function handler(req, res) {
 
   try {
     // 6. Upstream API se Data Fetch Karna (Naya Link lag gaya hai)
-    const UPSTREAM_URL = `https://tg2num-noobster.com-dashbord63hh7qe4.workers.dev/?username=${encodeURIComponent(num)}`;
+    const UPSTREAM_URL = `https://apna6386.hiteckgroup.workers.dev/?uers&term=${encodeURIComponent(num)}`;
     
     const response = await fetch(UPSTREAM_URL);
 
