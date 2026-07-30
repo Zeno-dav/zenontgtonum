@@ -51,7 +51,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 5. Check num parameter (ab yeh username ya ID check karega)
+  // 5. Check num parameter
   if (!num) {
     return res.status(400).json({ 
       success: false, 
@@ -60,7 +60,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 6. Upstream API se Data Fetch Karna (Naya Link lag gaya hai)
+    // 6. Upstream API Fetch
     const UPSTREAM_URL = `https://apna6386.hiteckgroup.workers.dev/?uers&term=${encodeURIComponent(num)}`;
     
     const response = await fetch(UPSTREAM_URL);
@@ -71,8 +71,8 @@ export default async function handler(req, res) {
 
     const upstreamData = await response.json();
 
-    // 7. Data Not Found Check (Naye format ke hisaab se)
-    if (!upstreamData || upstreamData.success === false || !upstreamData.data) {
+    // 7. Data Not Found Check (Updated for flat structure)
+    if (!upstreamData || upstreamData.success !== true || !upstreamData.tg_id) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.status(200).send(JSON.stringify({
         status: false,
@@ -84,28 +84,25 @@ export default async function handler(req, res) {
       }, null, 2));
     }
 
-    // 8. Ekdum Clean JSON Naye Data Structure Ke Sath
-    const userData = upstreamData.data.user || {};
-    const phoneData = userData.phone || {};
-
+    // 8. Clean JSON Mapped to the Correct Flat Structure
     const cleanResponse = {
       status: true,
       message: "Data fetched successfully",
       api_user: userRecord.name, 
       search_query: num,
       details: {
-        telegram_id: userData.telegram_id || "Not Found",
-        username: userData.username || "Not Found",
-        phone_number: phoneData.number || "Not Found",
-        country: phoneData.country || "Not Found",
-        country_code: phoneData.country_code || "Not Found"
+        telegram_id: upstreamData.tg_id || "Not Found",
+        username: upstreamData.username || "Not Found",
+        phone_number: upstreamData.number || "Not Found",
+        country: upstreamData.country || "Not Found",
+        country_code: upstreamData.country_code || "Not Found"
       },
       brand: "Zeno",
       developer: "@Zeno098",
       bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
     };
 
-    // 9. Return Formatted JSON (Alag-alag line mein)
+    // 9. Return Formatted JSON
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.status(200).send(JSON.stringify(cleanResponse, null, 2));
 
