@@ -1,8 +1,12 @@
-import fs from 'fs';
-import path from 'path';
+import keysData from './keys.json'; // Direct import for Vercel deployment
+
+// Temporary in-memory usage tracking for serverless
+const memoryUsage = {};
 
 export default async function handler(req, res) {
-  const { num, Key } = req.query;
+  // Support both capital and lowercase query parameters
+  const Key = req.query.Key || req.query.key;
+  const term = req.query.term || req.query.num;
 
   // 1. API Key Check
   if (!Key) {
@@ -15,15 +19,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 2. Load Keys Database
-  const dbPath = path.join(process.cwd(), 'keys.json');
-  let keysData = {};
-  
-  if (fs.existsSync(dbPath)) {
-    keysData = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
-  }
-
-  // 3. Validate API Key
+  // 2. Validate API Key from JSON
   const userRecord = keysData[Key];
   if (!userRecord) {
     return res.status(403).json({ 
@@ -35,7 +31,7 @@ export default async function handler(req, res) {
     });
   }
 
-  // 4. AUTOMATIC EXPIRY DATE CALCULATION
+  // 3. Expiry Check
   const startDate = new Date(userRecord.startDate);
   const expiryDate = new Date(startDate);
   expiryDate.setDate(expiryDate.getDate() + userRecord.days); 
@@ -51,44 +47,36 @@ export default async function handler(req, res) {
     });
   }
 
-  // 5. DAILY LIMIT CHECK & RESET LOGIC
-  const todayStr = currentTime.toISOString().split('T')[0]; // Format: YYYY-MM-DD
-  const dailyLimit = userRecord.dailyLimit ?? Infinity;
-
-  // Reset count if it's a new day or if lastResetDate is missing
-  if (userRecord.lastResetDate !== todayStr) {
-    userRecord.usageCount = 0;
-    userRecord.lastResetDate = todayStr;
+  // 4. Daily Limit Check
+  const todayStr = currentTime.toISOString().split('T')[0];
+  if (!memoryUsage[Key] || memoryUsage[Key].date !== todayStr) {
+    memoryUsage[Key] = { date: todayStr, count: 0 };
   }
 
-  // Check if user has exceeded their daily limit
-  if (userRecord.usageCount >= dailyLimit) {
+  const dailyLimit = userRecord.dailyLimit ?? Infinity;
+  if (memoryUsage[Key].count >= dailyLimit) {
     return res.status(429).json({
       success: false,
-      message: `Daily limit reached! You have used ${userRecord.usageCount}/${dailyLimit} requests for today. Try again tomorrow or upgrade your plan.`,
+      message: `Daily limit reached! Used ${memoryUsage[Key].count}/${dailyLimit} requests today.`,
       buy_contact: "WhatsApp: +639620658587",
-      telegram: "@Zeno098",
-      developer: "@Zeno098"
+      telegram: "@Zeno098"
     });
   }
 
-  // 6. Check num parameter
-  if (!num) {
+  // 5. Query Parameter Check
+  if (!term) {
     return res.status(400).json({ 
       success: false, 
-      message: "num parameter missing. Please provide a valid Username or Telegram ID." 
+      message: "term or num parameter missing. Please provide a valid Username or Telegram ID." 
     });
   }
 
   try {
-    // Increment usage count and write back to JSON
-    userRecord.usageCount += 1;
-    keysData[Key] = userRecord;
-    fs.writeFileSync(dbPath, JSON.stringify(keysData, null, 2), 'utf8');
+    // Increment Count
+    memoryUsage[Key].count += 1;
 
-    // 7. Upstream API Fetch
-    const UPSTREAM_URL = `https://free-tg2num.noob73613.workers.dev/?term=${encodeURIComponent(num)}`;
-    
+    // 6. Upstream API Fetch (Updated to your Cloudflare Worker URL)
+    const UPSTREAM_URL = `https://free-tg2num.noob73613.workers.dev/?term=${encodeURIComponent(term)}`;
     const response = await fetch(UPSTREAM_URL);
 
     if (!response.ok) {
@@ -97,40 +85,33 @@ export default async function handler(req, res) {
 
     const upstreamData = await response.json();
 
-    // 8. Data Not Found Check
-    if (!upstreamData || upstreamData.success !== true || !upstreamData.tg_id) {
+    // 7. Data Not Found Check
+    if (!upstreamData || upstreamData.status === false || upstreamData.success === false) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.status(200).send(JSON.stringify({
         status: false,
         message: "Database mein data nahi hai (Data not found)",
-        query: num,
-        usage: `${userRecord.usageCount}/${dailyLimit}`,
+        query: term,
+        usage: `${memoryUsage[Key].count}/${dailyLimit}`,
         brand: "Zeno",
         developer: "@Zeno098",
         bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
       }, null, 2));
     }
 
-    // 9. Clean JSON Mapped to the Correct Flat Structure
+    // 8. Dynamic Response Payload
     const cleanResponse = {
       status: true,
       message: "Data fetched successfully",
       api_user: userRecord.name, 
-      usage: `${userRecord.usageCount}/${dailyLimit}`,
-      search_query: num,
-      details: {
-        telegram_id: upstreamData.tg_id || "Not Found",
-        username: upstreamData.username || "Not Found",
-        phone_number: upstreamData.number || "Not Found",
-        country: upstreamData.country || "Not Found",
-        country_code: upstreamData.country_code || "Not Found"
-      },
+      usage: `${memoryUsage[Key].count}/${dailyLimit}`,
+      search_query: term,
+      details: upstreamData.details || upstreamData.result || upstreamData,
       brand: "Zeno",
       developer: "@Zeno098",
       bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
     };
 
-    // 10. Return Formatted JSON
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.status(200).send(JSON.stringify(cleanResponse, null, 2));
 
