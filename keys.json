@@ -2,16 +2,17 @@
   "zeno_premium_key": {
     "name": "Admin",
     "startDate": "2026-07-27",
-    "days": 30
+    "days": 999,
+    "dailyLimit": 9999,
+    "usageCount": 1,
+    "lastResetDate": "2026-08-06"
   },
-   "maow": {
-    "name": "ghop ghop",
-    "startDate": "2026-07-30",
-    "days": 5
-    },
-  "idk": {
-    "name": "damo diya hu ",
-    "startDate": "2026-07-31",
-    "days": 1
+  "tho-buy-kab-kar-raha-hai": {
+    "name": "Bhai buy kar le yaar Ghar per mere biwi bacche Hain 4 😢😢",
+    "startDate": "2026-08-04",
+    "days": 5,
+    "dailyLimit": 150,
+    "usageCount": 1,
+    "lastResetDate": "2026-08-06"
   }
 }
