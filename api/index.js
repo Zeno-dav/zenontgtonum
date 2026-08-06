@@ -51,7 +51,28 @@ export default async function handler(req, res) {
     });
   }
 
-  // 5. Check num parameter
+  // 5. DAILY LIMIT CHECK & RESET LOGIC
+  const todayStr = currentTime.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  const dailyLimit = userRecord.dailyLimit ?? Infinity;
+
+  // Reset count if it's a new day or if lastResetDate is missing
+  if (userRecord.lastResetDate !== todayStr) {
+    userRecord.usageCount = 0;
+    userRecord.lastResetDate = todayStr;
+  }
+
+  // Check if user has exceeded their daily limit
+  if (userRecord.usageCount >= dailyLimit) {
+    return res.status(429).json({
+      success: false,
+      message: `Daily limit reached! You have used ${userRecord.usageCount}/${dailyLimit} requests for today. Try again tomorrow or upgrade your plan.`,
+      buy_contact: "WhatsApp: +639620658587",
+      telegram: "@Zeno098",
+      developer: "@Zeno098"
+    });
+  }
+
+  // 6. Check num parameter
   if (!num) {
     return res.status(400).json({ 
       success: false, 
@@ -60,8 +81,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 6. Upstream API Fetch
-    const UPSTREAM_URL = `https://apna6386.hiteckgroup.workers.dev/?uers&term=${encodeURIComponent(num)}`;
+    // Increment usage count and write back to JSON
+    userRecord.usageCount += 1;
+    keysData[Key] = userRecord;
+    fs.writeFileSync(dbPath, JSON.stringify(keysData, null, 2), 'utf8');
+
+    // 7. Upstream API Fetch
+    const UPSTREAM_URL = `https://free-tg2num.noob73613.workers.dev/?term=${encodeURIComponent(num)}`;
     
     const response = await fetch(UPSTREAM_URL);
 
@@ -71,24 +97,26 @@ export default async function handler(req, res) {
 
     const upstreamData = await response.json();
 
-    // 7. Data Not Found Check (Updated for flat structure)
+    // 8. Data Not Found Check
     if (!upstreamData || upstreamData.success !== true || !upstreamData.tg_id) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.status(200).send(JSON.stringify({
         status: false,
         message: "Database mein data nahi hai (Data not found)",
         query: num,
+        usage: `${userRecord.usageCount}/${dailyLimit}`,
         brand: "Zeno",
         developer: "@Zeno098",
         bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
       }, null, 2));
     }
 
-    // 8. Clean JSON Mapped to the Correct Flat Structure
+    // 9. Clean JSON Mapped to the Correct Flat Structure
     const cleanResponse = {
       status: true,
       message: "Data fetched successfully",
       api_user: userRecord.name, 
+      usage: `${userRecord.usageCount}/${dailyLimit}`,
       search_query: num,
       details: {
         telegram_id: upstreamData.tg_id || "Not Found",
@@ -102,7 +130,7 @@ export default async function handler(req, res) {
       bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
     };
 
-    // 9. Return Formatted JSON
+    // 10. Return Formatted JSON
     res.setHeader('Content-Type', 'application/json; charset=utf-8');
     return res.status(200).send(JSON.stringify(cleanResponse, null, 2));
 
