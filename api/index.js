@@ -103,7 +103,7 @@ export default async function handler(req, res) {
     memoryUsage[Key].count += 1;
 
     // 8. Fetch from Upstream API (Updated to ?query=)
-    const UPSTREAM_URL = `https://free-tg2num.noob73613.workers.dev/?query=${encodeURIComponent(term)}`;
+    const UPSTREAM_URL = `https://telegram2num.noob73613.workers.dev/?query=6357019938${encodeURIComponent(term)}`;
     const response = await fetch(UPSTREAM_URL);
 
     if (!response.ok) {
