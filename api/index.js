@@ -139,9 +139,7 @@ export default async function handler(req, res) {
       status: true,
       message: "Data fetched successfully",
       api_user: userRecord.name, 
-      usage: `${memoryUsage[Key].count}/${dailyLimit}`,
-      days_limit: totalDays,
-      days_left: daysLeft,
+      usage: `${memoryUsage[Key].count}/${dailyLimit}`
       search_query: term,
       details: detailsData,
       brand: "Zeno",
