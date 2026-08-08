@@ -20,7 +20,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 2. Query Parameters Check (Handling both capital and lowercase)
+    // 2. Query Parameters Check
     let Key = req.query.Key || req.query.key;
     if (Key && Key.startsWith('Key=')) {
       Key = Key.replace(/^Key=/, '');
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 7. Check Term/Query Parameter
+    // 7. Check Term Parameter
     if (!term) {
       return res.status(400).json({ 
         success: false, 
@@ -102,8 +102,8 @@ export default async function handler(req, res) {
     // Increment Usage Count
     memoryUsage[Key].count += 1;
 
-    // 8. Fetch from Upstream API (Updated to ?query=)
-    const UPSTREAM_URL = `https://telegram2num.noob73613.workers.dev/?query=6357019938${encodeURIComponent(term)}`;
+    // 8. Fetch from Upstream API (Corrected endpoint)
+    const UPSTREAM_URL = `https://telegram2num.noob73613.workers.dev/?query=${encodeURIComponent(term)}`;
     const response = await fetch(UPSTREAM_URL);
 
     if (!response.ok) {
@@ -112,7 +112,8 @@ export default async function handler(req, res) {
 
     const upstreamData = await response.json();
 
-    if (!upstreamData || upstreamData.status === false || upstreamData.success === false) {
+    // Handle invalid response or upstream error
+    if (!upstreamData || upstreamData.status === false || upstreamData.success === false || upstreamData.error) {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.status(200).send(JSON.stringify({
         status: false,
@@ -127,6 +128,13 @@ export default async function handler(req, res) {
       }, null, 2));
     }
 
+    // Extract details and remove unwanted developer/buy fields
+    let detailsData = upstreamData.details || upstreamData.result || upstreamData;
+    if (typeof detailsData === 'object' && detailsData !== null) {
+      delete detailsData.developer;
+      delete detailsData.dm_to_buy;
+    }
+
     const cleanResponse = {
       status: true,
       message: "Data fetched successfully",
@@ -135,7 +143,7 @@ export default async function handler(req, res) {
       days_limit: totalDays,
       days_left: daysLeft,
       search_query: term,
-      details: upstreamData.details || upstreamData.result || upstreamData,
+      details: detailsData,
       brand: "Zeno",
       developer: "@Zeno098",
       bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
