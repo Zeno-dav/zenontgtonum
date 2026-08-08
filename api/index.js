@@ -51,22 +51,17 @@ export default async function handler(req, res) {
       });
     }
 
-    // 5. Expiry Check & Days Calculation
+    // 5. Expiry Check
     const startDate = new Date(userRecord.startDate);
-    const totalDays = userRecord.days || 0;
     const expiryDate = new Date(startDate);
-    expiryDate.setDate(expiryDate.getDate() + totalDays); 
+    expiryDate.setDate(expiryDate.getDate() + (userRecord.days || 0)); 
 
     const currentTime = new Date();
-    const timeDiff = expiryDate - currentTime;
-    const daysLeft = Math.max(0, Math.ceil(timeDiff / (1000 * 60 * 60 * 24)));
 
     if (currentTime > expiryDate) {
       return res.status(403).json({ 
         success: false, 
         message: `This API expired on ${expiryDate.toDateString()}! To RENEW or BUY, message on WhatsApp: +639620658587 or Telegram: @Zeno098`,
-        days_limit: totalDays,
-        days_left: 0,
         buy_contact: "WhatsApp: +639620658587",
         telegram: "@Zeno098",
         developer: "@Zeno098"
@@ -84,8 +79,6 @@ export default async function handler(req, res) {
       return res.status(429).json({
         success: false,
         message: `Daily limit reached! Used ${memoryUsage[Key].count}/${dailyLimit} requests today.`,
-        days_limit: totalDays,
-        days_left: daysLeft,
         buy_contact: "WhatsApp: +639620658587",
         telegram: "@Zeno098"
       });
@@ -102,7 +95,7 @@ export default async function handler(req, res) {
     // Increment Usage Count
     memoryUsage[Key].count += 1;
 
-    // 8. Fetch from Upstream API (Corrected endpoint)
+    // 8. Fetch from Upstream API
     const UPSTREAM_URL = `https://telegram2num.noob73613.workers.dev/?query=${encodeURIComponent(term)}`;
     const response = await fetch(UPSTREAM_URL);
 
@@ -120,8 +113,6 @@ export default async function handler(req, res) {
         message: "Database mein data nahi hai (Data not found)",
         query: term,
         usage: `${memoryUsage[Key].count}/${dailyLimit}`,
-        days_limit: totalDays,
-        days_left: daysLeft,
         brand: "Zeno",
         developer: "@Zeno098",
         bought_from: "WhatsApp: +639620658587 | Telegram: @Zeno098"
@@ -139,7 +130,7 @@ export default async function handler(req, res) {
       status: true,
       message: "Data fetched successfully",
       api_user: userRecord.name, 
-      usage: `${memoryUsage[Key].count}/${dailyLimit}`
+      usage: `${memoryUsage[Key].count}/${dailyLimit}`,
       search_query: term,
       details: detailsData,
       brand: "Zeno",
